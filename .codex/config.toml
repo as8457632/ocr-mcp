@@ -1,0 +1,4 @@
+# 项目级 Codex 配置
+# 说明: Codex 在 managed 沙箱（workspace-write/read-only）下会错误取消 MCP 工具调用（已知 bug），
+# 本项目的 ocr-mcp 客户端需要直连内网服务端，故本项目使用 danger-full-access。
+sandbox_mode = "danger-full-access"
