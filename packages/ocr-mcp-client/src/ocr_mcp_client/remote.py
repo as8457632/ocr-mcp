@@ -11,7 +11,7 @@ from mcp.types import CallToolResult, TextContent
 
 
 def parse_result(result: CallToolResult) -> dict:
-    """将远端工具调用结果解析为 {text, model}。
+    """将远端工具调用结果解析为 {text}。
 
     优先使用 structuredContent，其次尝试解析 JSON 文本，最后原样返回文本。
     """
@@ -25,21 +25,15 @@ def parse_result(result: CallToolResult) -> dict:
 
     structured = result.structuredContent
     if isinstance(structured, dict):
-        return {
-            "text": str(structured.get("text", raw_text)),
-            "model": str(structured.get("model", "unknown")),
-        }
+        return {"text": str(structured.get("text", raw_text))}
 
     try:
         data = json.loads(raw_text)
     except (json.JSONDecodeError, ValueError):
         data = None
     if isinstance(data, dict):
-        return {
-            "text": str(data.get("text", raw_text)),
-            "model": str(data.get("model", "unknown")),
-        }
-    return {"text": raw_text, "model": "unknown"}
+        return {"text": str(data.get("text", raw_text))}
+    return {"text": raw_text}
 
 
 async def call_remote_ocr(

@@ -227,7 +227,7 @@ async def test_e2e_streamable_http(monkeypatch):
         result = await session.call_tool("ocr_image", {"image": PNG_DATA_URI})
         assert result.isError is False
         assert result.structuredContent["text"] == "OCR 识别结果：你好，世界"
-        assert result.structuredContent["model"] == "test-model"
+        assert set(result.structuredContent) == {"text"}
 
         structured = await session.call_tool(
             "ocr_image", {"image": PNG_DATA_URI, "mode": MODE_STRUCTURED}

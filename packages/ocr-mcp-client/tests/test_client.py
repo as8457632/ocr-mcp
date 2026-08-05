@@ -68,7 +68,7 @@ def make_fake_remote_server() -> Server:
             "image"
         ].startswith("data:"):
             raise ValueError("image 必须是 data URI")
-        return {"text": "FAKE OCR TEXT", "model": "fake-model"}
+        return {"text": "FAKE OCR TEXT"}
 
     return server, received_arguments
 
@@ -203,19 +203,19 @@ def test_parse_result_structured():
         structured={"text": "结构化文本", "model": "qwen-vl"},
     )
     parsed = parse_result(result)
-    assert parsed == {"text": "结构化文本", "model": "qwen-vl"}
+    assert parsed == {"text": "结构化文本"}
 
 
 def test_parse_result_json_fallback():
     result = _text_result('{"text": "JSON 文本", "model": "glm-4v"}')
     parsed = parse_result(result)
-    assert parsed == {"text": "JSON 文本", "model": "glm-4v"}
+    assert parsed == {"text": "JSON 文本"}
 
 
 def test_parse_result_plain_text():
     result = _text_result("纯文本结果")
     parsed = parse_result(result)
-    assert parsed == {"text": "纯文本结果", "model": "unknown"}
+    assert parsed == {"text": "纯文本结果"}
 
 
 def test_parse_result_error():
@@ -230,7 +230,7 @@ async def test_call_remote_ocr_e2e():
     result = await call_remote_ocr(
         url, PNG_DATA_URI, prompt="识别", mode="structured", token=None, timeout=30
     )
-    assert result == {"text": "FAKE OCR TEXT", "model": "fake-model"}
+    assert result == {"text": "FAKE OCR TEXT"}
     assert received[-1]["mode"] == "structured"
     assert received[-1]["prompt"] == "识别"
 
@@ -263,8 +263,8 @@ async def test_full_chain_stdio(tmp_path: Path):
         result = await session.call_tool("ocr_image", {"image": str(image)})
         assert result.isError is False
         assert result.structuredContent["text"] == "FAKE OCR TEXT"
-        assert result.structuredContent["model"] == "fake-model"
         assert result.structuredContent["source"] == str(image)
+        assert set(result.structuredContent) == {"text", "source"}
 
         structured = await session.call_tool(
             "ocr_image", {"image": str(image), "mode": "structured"}

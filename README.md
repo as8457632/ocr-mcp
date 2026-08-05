@@ -228,8 +228,7 @@ cp packages/ocr-mcp-client/skill/SKILL.md ~/.claude/skills/ocr-mcp/SKILL.md
 ```json
 {
   "text": "识别出的全部文字",
-  "source": "用户传入的图片路径或 URL",
-  "model": "实际使用的模型名"
+  "source": "用户传入的图片路径或 URL"
 }
 ```
 

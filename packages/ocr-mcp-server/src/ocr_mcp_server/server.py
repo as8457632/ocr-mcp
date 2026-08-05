@@ -48,7 +48,7 @@ def create_server(config: ServerConfig) -> Server:
         return [
             Tool(
                 name="ocr_image",
-                description="识别图片中的全部文字，返回识别结果与所用模型。",
+                description="识别图片中的全部文字。",
                 inputSchema=OCR_IMAGE_SCHEMA,
             )
         ]
@@ -67,6 +67,6 @@ def create_server(config: ServerConfig) -> Server:
         if mode not in SUPPORTED_MODES:
             raise ValueError(f"参数 mode 必须是 {' 或 '.join(SUPPORTED_MODES)} 之一")
         text = await run_ocr(client, config.model, image, prompt, mode)
-        return {"text": text, "model": config.model}
+        return {"text": text}
 
     return server
