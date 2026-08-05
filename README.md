@@ -80,11 +80,15 @@ export OCR_MCP_SERVER_URL="http://<server-host>:8000/mcp"
 
 #### 无源码机器：从 GitHub 安装客户端
 
-其他机器不需要克隆整个仓库，用 `uv tool` 只装客户端即可：
+其他机器不需要克隆整个仓库，用 `uv tool` 只装客户端即可。仓库为**私有**，安装前需能访问 GitHub（SSH key，或 `gh auth login` / `GIT_ASKPASS` / HTTPS token）。
 
 ```bash
 # 需已安装 uv（https://docs.astral.sh/uv/）
+# HTTPS（需已配置有 repo 读权限的凭据）
 uv tool install "git+https://github.com/as8457632/ocr-mcp.git#subdirectory=packages/ocr-mcp-client"
+
+# 或 SSH
+uv tool install "git+ssh://git@github.com/as8457632/ocr-mcp.git#subdirectory=packages/ocr-mcp-client"
 
 # 确认命令可用
 which ocr-mcp-client
