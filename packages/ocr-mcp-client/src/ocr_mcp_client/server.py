@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import re
 from pathlib import Path
 
 from mcp.server import Server
@@ -34,12 +36,19 @@ MIME_TYPES = {
     ".tif": "image/tiff",
 }
 
+# 纯 base64 至少约对应几十字节图片，避免把短字符串误判为 base64
+_MIN_RAW_BASE64_LEN = 64
+_RAW_BASE64_RE = re.compile(r"^[A-Za-z0-9+/=\s]+$")
+
 OCR_IMAGE_SCHEMA = {
     "type": "object",
     "properties": {
         "image": {
             "type": "string",
-            "description": "本地图片文件路径或 http(s):// 图片 URL",
+            "description": (
+                "图片来源：本地文件路径、http(s):// URL、"
+                "data URI（data:image/...;base64,...），或纯 base64 图片数据"
+            ),
         },
         "prompt": {
             "type": ["string", "null"],
@@ -74,18 +83,74 @@ def file_to_data_uri(path_str: str) -> str:
     return f"data:{MIME_TYPES[suffix]};base64,{encoded}"
 
 
+def _looks_like_filesystem_path(image: str) -> bool:
+    """判断是否像本地文件路径（优先于纯 base64，因 base64 也可含 '/'）。"""
+    s = image.strip()
+    if not s:
+        return False
+    if s.startswith(("/", "~/", "./", "../", "~\\")):
+        return True
+    # Windows: C:\... 或 C:/...
+    if len(s) >= 3 and s[0].isalpha() and s[1] == ":" and s[2] in "/\\":
+        return True
+    if "\\" in s:
+        return True
+    # 相对路径常带扩展名，如 shot.png
+    return Path(s).suffix.lower() in SUPPORTED_EXTENSIONS
+
+
+def _looks_like_raw_base64(image: str) -> bool:
+    """粗判是否为纯 base64 图片数据（非路径、非 URL、非 data URI）。"""
+    if _looks_like_filesystem_path(image):
+        return False
+    compact = "".join(image.split())
+    if len(compact) < _MIN_RAW_BASE64_LEN:
+        return False
+    if not _RAW_BASE64_RE.fullmatch(compact):
+        return False
+    try:
+        decoded = base64.b64decode(compact, validate=True)
+    except (binascii.Error, ValueError):
+        return False
+    return bool(decoded)
+
+
 def to_server_image(image: str) -> str:
-    """将用户输入归一化为服务端可用的图片表示：URL 原样透传，本地路径转 data URI。"""
-    if image.startswith(("http://", "https://")):
-        return image
-    return file_to_data_uri(image)
+    """将用户输入归一化为服务端可用的图片表示。
+
+    支持：data URI、http(s) URL、纯 base64、本地文件路径。
+    """
+    stripped = image.strip()
+    if stripped.startswith("data:") and ";base64," in stripped:
+        return stripped
+    if stripped.startswith(("http://", "https://")):
+        return stripped
+    if _looks_like_filesystem_path(stripped):
+        return file_to_data_uri(stripped)
+    if _looks_like_raw_base64(stripped):
+        compact = "".join(stripped.split())
+        return f"data:image/png;base64,{compact}"
+    return file_to_data_uri(stripped)
+
+
+def source_label(image: str) -> str:
+    """生成返回给调用方的 source 标签，避免把整段 base64 回传。"""
+    stripped = image.strip()
+    if stripped.startswith("data:") and ";base64," in stripped:
+        mime = stripped[5:].split(";", 1)[0] or "image"
+        return f"data:{mime};base64,..."
+    if _looks_like_raw_base64(stripped):
+        return "base64:..."
+    return image
 
 
 def create_server(config: ClientConfig) -> Server:
     """创建客户端 MCP Server，注册 ocr_image 工具。"""
     server = Server(
         "ocr-mcp-client",
-        instructions="将本地图片转发给远端 OCR MCP 服务进行文字识别。",
+        instructions=(
+            "将本地路径、URL 或 base64/data URI 图片转发给远端 OCR MCP 服务进行文字识别。"
+        ),
     )
 
     @server.list_tools()
@@ -93,7 +158,10 @@ def create_server(config: ClientConfig) -> Server:
         return [
             Tool(
                 name="ocr_image",
-                description="识别图片中的全部文字。传入本地图片路径或图片 URL。",
+                description=(
+                    "识别图片中的全部文字。"
+                    "image 可为本地路径、http(s) URL、data URI 或纯 base64，无需先落盘。"
+                ),
                 inputSchema=OCR_IMAGE_SCHEMA,
             )
         ]
@@ -121,7 +189,7 @@ def create_server(config: ClientConfig) -> Server:
             token=config.server_token,
             timeout=config.timeout,
         )
-        result["source"] = image
+        result["source"] = source_label(image)
         return result
 
     return server

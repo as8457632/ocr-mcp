@@ -201,7 +201,7 @@ cp packages/ocr-mcp-client/skill/SKILL.md ~/.claude/skills/ocr-mcp/SKILL.md
 
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `image` | string | 是 | 客户端：本地图片路径或 http(s):// 图片 URL；服务端：data URI 或 http(s):// URL |
+| `image` | string | 是 | 客户端：本地路径、http(s) URL、data URI 或纯 base64；服务端：data URI 或 http(s) URL |
 | `prompt` | string | 否 | 自定义识别提示词，默认按 OCR 场景优化 |
 | `mode` | string | 否 | 识别模式：`plain`（默认，保持排版输出纯文本）或 `structured`（输出 Markdown 结构化文本：标题/列表/表格） |
 

@@ -16,7 +16,7 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import CallToolResult, TextContent, Tool
 from ocr_mcp_client.config import ConfigError, load_config
 from ocr_mcp_client.remote import call_remote_ocr, parse_result
-from ocr_mcp_client.server import file_to_data_uri, to_server_image
+from ocr_mcp_client.server import file_to_data_uri, source_label, to_server_image
 from starlette.applications import Starlette
 from starlette.routing import Route
 
@@ -182,9 +182,19 @@ def test_file_to_data_uri_empty(tmp_path: Path):
 
 def test_to_server_image(tmp_path: Path):
     assert to_server_image("https://example.com/a.png") == "https://example.com/a.png"
+    assert to_server_image(PNG_DATA_URI) == PNG_DATA_URI
+    raw_b64 = base64.b64encode(PNG_BYTES).decode("ascii")
+    assert to_server_image(raw_b64) == f"data:image/png;base64,{raw_b64}"
     image = tmp_path / "a.png"
     image.write_bytes(PNG_BYTES)
     assert to_server_image(str(image)).startswith("data:image/png;base64,")
+
+
+def test_source_label():
+    assert source_label(PNG_DATA_URI) == "data:image/png;base64,..."
+    raw_b64 = base64.b64encode(PNG_BYTES).decode("ascii")
+    assert source_label(raw_b64) == "base64:..."
+    assert source_label("/tmp/a.png") == "/tmp/a.png"
 
 
 def _text_result(

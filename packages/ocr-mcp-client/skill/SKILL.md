@@ -2,9 +2,11 @@
 name: ocr-mcp
 description: >-
   通过 OCR MCP 的 ocr_image 工具从图片提取文字。
+  image 支持本地路径、URL、data URI 与纯 base64，可直接传入，无需先落盘。
   在用户需要文字提取、OCR、识别图片、读取截图、分析截图、查看截图、查看图片，
   或要从截图/图片得到可靠文案时使用。
 ---
+
 
 # OCR MCP
 
@@ -26,9 +28,10 @@ description: >-
 
 ## 步骤
 
-1. **确定 `image`（只要路径/URL 字符串，不依赖模型看图）**
-   - 优先使用对话中给出的本地**绝对路径**（系统保存的附件路径、`@` 文件、用户粘贴的路径）
-   - 其次使用用户提供的 `http(s)://` 图片 URL
+1. **确定 `image`（不依赖模型看图）**
+   - 本地**绝对路径**（系统保存的附件路径、`@` 文件）
+   - `http(s)://` 图片 URL
+   - **data URI**（`data:image/...;base64,...`）或**纯 base64** —— 可直接传入，**无需先写临时文件**
    - 禁止臆造路径；路径无效时把错误告诉用户，不要改猜文件
 2. **选择 `mode`（可选，默认 `plain`）**
    - 抄文案、排查报错、一般查看 → `plain`（或不传）
@@ -36,14 +39,14 @@ description: >-
 3. **按需传 `prompt`**
    - 只要某一类信息时再自定义（例如「只提取错误栈」）
    - 不需要时省略，使用服务端默认 OCR 提示词
-4. **立刻调用 `ocr_image`**，完成标准：拿到返回的 `text`（及 `source`）。不要先尝试用对话模型“看图”。
+4. **立刻调用 `ocr_image`**，完成标准：拿到返回的 `text`（及 `source`）。不要先尝试用对话模型“看图”，也不要仅为 OCR 去落盘 base64。
 5. **向用户呈现识别结果**，需要时可再基于 `text` 分析；不要用臆测文字替代识别结果
 
 ## 参数
 
 | 参数 | 必填 | 说明 |
 | --- | --- | --- |
-| `image` | 是 | 本地绝对路径或 `http(s)://` 图片 URL |
+| `image` | 是 | 本地绝对路径、`http(s)://` URL、data URI 或纯 base64 |
 | `mode` | 否 | `plain`（默认）或 `structured` |
 | `prompt` | 否 | 自定义识别提示词 |
 
@@ -53,7 +56,8 @@ description: >-
 
 | 现象 | Agent 动作 |
 | --- | --- |
-| `image_url` / `expected text` / Provider 反序列化失败 | 这是**对话模型不支持看图**，不是 OCR MCP 故障。用消息里的本地路径（或请用户只发路径文本）直接调 `ocr_image`，不要再把图片交给对话模型 |
+| `image_url` / `expected text` / Provider 反序列化失败 | 这是**对话模型不支持看图**，不是 OCR MCP 故障。用路径 / URL / data URI / base64 直接调 `ocr_image`，不要再把图片交给对话模型 |
+| 以为必须落盘才能 OCR | 错误。消息里已有 data URI 或 base64 时，原样传给 `image` 即可，禁止先写临时文件 |
 | 连接失败、超时、TaskGroup 等 | 提示检查 OCR 服务端是否在跑，以及客户端 `OCR_MCP_SERVER_URL` 是否指向正确地址与端口 |
 | 文件不存在、格式不支持、空文件 | 原样转述错误，请用户换路径或格式（支持 png/jpg/jpeg/webp/bmp/gif/tiff） |
 | MCP 工具不可用 | 提示 MCP 未挂载或客户端未启动；安装与 IDE 配置见项目 README，本 skill 不展开 |
